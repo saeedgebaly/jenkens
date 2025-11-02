@@ -1,33 +1,79 @@
 pipeline {
     agent any
-
-    environment {
-        IMAGE_NAME = "saeedgebaly/nodejs-app"
+    
+    tools {
+        maven 'maven'
+        jdk 'JDK17'
     }
-
+    
     stages {
-        stage('Build Docker Image') {
+        stage('Checkout') {
             steps {
-                echo "Building Docker image..."
-                sh 'docker build -t $IMAGE_NAME .'
+                git branch: 'main',
+                    credentialsId: 'github-credentials',
+                    url: 'https://github.com/saeedgebaly/jenkens.git'
             }
         }
-
-        stage('Push to Docker Hub') {
+        
+        stage('Build') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    sh 'docker push $IMAGE_NAME'
+                dir('test-1/demo') {
+                    sh 'mvn clean compile'
                 }
             }
         }
-
-        stage('Deploy to Kubernetes') {
+        
+        stage('Test') {
             steps {
-                echo "Deploying to Kubernetes..."
-                sh 'kubectl apply -f k8s/'
+                dir('test-1/demo') {
+                    sh 'mvn test'
+                }
+            }
+        }
+        
+        stage('Package') {
+            steps {
+                dir('test-1/demo') {
+                    sh 'mvn package -DskipTests'
+                }
+            }
+        }
+        
+        stage('Archive') {
+            steps {
+                dir('test-1/demo') {
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                }
+            }
+        }
+        
+        stage('Docker Build') {
+            steps {
+                dir('test-1/demo') {
+                    script {
+                        def imageName = "test-app:${env.BUILD_NUMBER}"
+                        def imageLatest = "test-app:latest"
+                        
+                        sh "docker build -t ${imageName} ."
+                        sh "docker tag ${imageName} ${imageLatest}"
+                        
+                        echo "✅ Docker image built: ${imageName}"
+                    }
+                }
             }
         }
     }
+    
+    post {
+        success {
+            echo '✅ Build completed successfully!'
+            echo "🐳 Docker image: test-app:${env.BUILD_NUMBER}"
+        }
+        failure {
+            echo '❌ Build failed!'
+        }
+        always {
+            junit allowEmptyResults: true, testResults: 'test-1/demo/target/surefire-reports/*.xml'
+        }
+    }
 }
-

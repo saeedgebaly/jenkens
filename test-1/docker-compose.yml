@@ -1,32 +1,17 @@
-version: '3.9'
-
+version: '3.8'
 services:
-  app:
-    build: .
-    container_name: node-app
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    user: root
     ports:
-      - "3000:3000"
-    depends_on:
-      - db
-    environment:
-      DB_HOST: db
-      DB_USER: app
-      DB_PASSWORD: 12345
-      DB_PORT: 3306
-    
-
-  db:
-    image: mysql:8
-    container_name: mysql_db
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: ivolve
-      MYSQL_USER: app
-      MYSQL_PASSWORD: 12345
-    ports:
-      - "3306:3306"
+      - "8080:8080"
+      - "50000:50000"
     volumes:
-      - db_mysql:/var/lib/mysql
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
 
 volumes:
-  db_mysql:
+  jenkins_home:
+    external: true
