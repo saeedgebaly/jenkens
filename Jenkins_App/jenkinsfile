@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+    environment {
+        IMAGE_NAME = 'saeedgebaly/app'
+        DOCKER_REGISTRY_FILE = "deployment.yaml"
+    }
+    stages {
+        stage('Run Unit Tests') {
+            steps {
+                echo 'Running unit tests...'
+                sh 'mvn test'
+            }
+        }
+        stage('Build the Application') {
+            steps {
+                echo 'Building the application...'
+                sh 'mvn package'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+
+                echo 'Building Docker image...'
+                sh 'docker build -t $IMAGE_NAME:$BUILD_NUMBER .'
+            }
+        }
+        stage('Push Docker Image to Registry') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
+                echo 'Pushing Docker image to registry...'
+                sh '''
+                docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+                docker push $IMAGE_NAME:$BUILD_NUMBER
+                '''
+            }
+        }
+        }
+        stage('Delete Docker Image') {
+            steps {
+                echo 'Deleting Docker image...'
+                sh 'docker rmi $IMAGE_NAME:$BUILD_NUMBER'
+            }
+        }
+        stage('Update Deployment deployment.yaml') {
+            steps {
+                echo 'Updating deployment...'
+                sh 'sed -i "s|image: .*|image: $IMAGE_NAME:$BUILD_NUMBER|" $DOCKER_REGISTRY_FILE'
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'ServiceAccount', variable: 'TOKEN')
+                    string(credentialsId: 'APIServer', variable: 'APIServer')
+                    ]) {
+                echo 'Deploying to Kubernetes...'
+                sh 'kubectl apply -f deployment.yaml --server \"$APIServer\" --token \"$TOKEN\" --insecure-skip-tls-verify=true'
+                    }
+                }
+            }
+        }
+        post {
+            always {
+                echo 'pipeline completed'
+            }
+            success {
+                echo 'pipeline completed successfully'
+            }
+            failure {
+                echo 'pipeline completed with failure'
+            }
+        }
+    }
