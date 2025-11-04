@@ -50,7 +50,7 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'ServiceAccount', variable: 'TOKEN')
+                    string(credentialsId: 'ServiceAccount', variable: 'TOKEN'),
                     string(credentialsId: 'APIServer', variable: 'APIServer')
                     ]) {
                 echo 'Deploying to Kubernetes...'
