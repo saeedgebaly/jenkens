@@ -1,6 +1,6 @@
 @Library('my-shared-library') _
 pipeline {
-    agent any
+    agent { label 'worker1' }
     environment {
         IMAGE_NAME = 'saeedgebaly/app'
         DOCKER_REGISTRY_FILE = "deployment.yaml"
