@@ -36,6 +36,7 @@ pipeline {
                 deployToK8s()
             }
         }
+    }
         post {
             always {
                 echo 'pipeline completed'
@@ -48,4 +49,3 @@ pipeline {
             }
         }
     }
-}
