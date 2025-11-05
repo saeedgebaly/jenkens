@@ -1,4 +1,4 @@
-def pushDockerImage() {
+def call() {
     withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
     echo 'Pushing Docker image to registry...'
     sh '''
