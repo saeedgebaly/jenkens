@@ -21,6 +21,11 @@ pipeline {
                 buildDockerImage()
             }
         }
+        stage('Push Docker Image to Registry') {
+            steps {
+                pushDockerImage()
+            }
+        }
         stage('Delete Docker Image') {
             steps {
                 removeDockerImage()
